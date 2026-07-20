@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  hashedPassword String
+  createdAt      DateTime      @default(now())
+  discrepancies  Discrepancy[]
+  importBatches  ImportBatch[]
+  orders         Order[]
+  payments       Payment[]
+}
+
+model ImportBatch {
+  id           String    @id @default(uuid())
+  userId       String
+  source       Source
+  filename     String
+  importedAt   DateTime  @default(now())
+  rowCount     Int
+  warningCount Int
+  user         User      @relation(fields: [userId], references: [id])
+  orders       Order[]
+  payments     Payment[]
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  userId        String
+  importBatchId String
+  orderId       String
+  orderDate     DateTime
+  customerEmail String?
+  currency      String
+  grossAmount   Decimal
+  discount      Decimal?
+  netAmount     Decimal
+  status        OrderStatus
+  discrepancies Discrepancy[]
+  importBatch   ImportBatch   @relation(fields: [importBatchId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+
+  @@unique([userId, orderId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  userId         String
+  importBatchId  String
+  transactionRef String
+  processedAt    DateTime?
+  orderReference String
+  currency       String
+  amount         Decimal
+  fee            Decimal
+  netSettled     Decimal
+  type           PaymentType
+  status         PaymentStatus
+  importBatch    ImportBatch   @relation(fields: [importBatchId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+}
+
+model Discrepancy {
+  id           String          @id @default(uuid())
+  userId       String
+  orderId      String?
+  type         DiscrepancyType
+  severity     Severity
+  amountAtRisk Decimal
+  details      Json
+  createdAt    DateTime        @default(now())
+  order        Order?          @relation(fields: [orderId], references: [id])
+  user         User            @relation(fields: [userId], references: [id])
+}
+
+enum Source {
+  ORDERS
+  PAYMENTS
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentType {
+  CHARGE
+  REFUND
+}
+
+enum PaymentStatus {
+  SETTLED
+  PENDING
+  FAILED
+}
+
+enum DiscrepancyType {
+  MISSING_PAYMENT
+  ORPHAN_PAYMENT
+  DUPLICATE_CHARGE
+  PAYMENT_FAILED
+  PAYMENT_PENDING
+  AMOUNT_MISMATCH
+  CURRENCY_MISMATCH
+  REFUND_STATUS_MISMATCH
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
