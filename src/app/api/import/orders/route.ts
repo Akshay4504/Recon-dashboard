@@ -8,7 +8,7 @@ import {
   dedupeRows,
 } from "@/lib/csv-parse";
 import { parseOrderDate } from "@/lib/date-parse";
-import { Prisma } from "@prisma/client";
+import { Prisma, OrderStatus } from "@prisma/client";
 
 // Expected CSV columns (case-sensitive, must match exactly)
 const REQUIRED_HEADERS = [
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
             grossAmount: r.grossAmount,
             discount: r.discount,
             netAmount: r.netAmount,
-            status: r.status as Prisma.$Enums.OrderStatus,
+            status: r.status as OrderStatus,
           })),
           skipDuplicates: true,
         });
